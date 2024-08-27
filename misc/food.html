@@ -182,6 +182,7 @@
 
         productList.appendChild(table);
         localStorage.setItem('products', JSON.stringify(products)); // Сохраняем все продукты в LocalStorage
+        updateTotal(); // Обновляем итоги после генерации таблицы
     }
 
     function saveProducts() {
@@ -204,7 +205,7 @@
         localStorage.setItem('products', JSON.stringify(products)); // Сохраняем все продукты в LocalStorage
     }
 
-    function updateTotal(price, weight, protein, fat, carbs, kcal, eaten) {
+    function updateTotal() {
         let totalWeight = 0;
         let totalCost = 0;
         let totalProtein = 0;
@@ -216,6 +217,13 @@
         rows.forEach(row => {
             const input = row.querySelector('input');
             const eatenAmount = parseFloat(input.value) || 0;
+
+            const price = parseFloat(row.cells[2].innerText); // Цена
+            const weight = parseFloat(row.cells[4].innerText); // Вес
+            const protein = parseFloat(row.cells[5].innerText); // Белок
+            const fat = parseFloat(row.cells[6].innerText); // Жир
+            const carbs = parseFloat(row.cells[7].innerText); // Углеводы
+            const kcal = parseFloat(row.cells[8].innerText); // Калории
 
             totalWeight += eatenAmount;
             totalCost += (eatenAmount / weight) * price;
@@ -268,7 +276,7 @@
                 const input = row.querySelector('input');
                 input.value = '0';
             });
-            updateTotal(0, 0, 0, 0, 0, 0, 0);
+            updateTotal();
         }
     }
 
