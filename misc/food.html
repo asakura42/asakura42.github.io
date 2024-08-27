@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор продуктов</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .total {
+            font-weight: bold;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        .progress {
+            height: 20px;
+            border-radius: 5px;
+            text-align: center;
+            color: white;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .left-column {
+            width: 70%;
+        }
+        .right-column {
+            width: 25%;
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Калькулятор продуктов</h1>
+
+<div class="container">
+    <div class="left-column">
+        <p>Вставьте таблицу продуктов из Excel (разделитель - TAB):</p>
+        <textarea id="productTable" rows="10" cols="100" placeholder="Вставьте таблицу сюда..."></textarea>
+        <br>
+        <button onclick="generateTable()">Сгенерировать таблицу</button>
+        <button onclick="resetEaten()">Сбросить съеденное</button>
+
+        <div id="productList"></div>
+
+        <h2>Итоги</h2>
+        <p>Общее количество съеденного: <span id="totalWeight" class="total">0</span> г</p>
+        <p>Общие затраты: <span id="totalCost" class="total">0</span> руб</p>
+        <p>Общий протеин: <span id="totalProtein" class="total">0</span> г</p>
+        <p>Общий жир: <span id="totalFat" class="total">0</span> г</p>
+        <p>Общие углеводы: <span id="totalCarbs" class="total">0</span> г</p>
+        <p>Общие калории: <span id="totalKcal" class="total">0</span> ккал</p>
+    </div>
+
+    <div class="right-column">
+        <h2>Дневные нормы</h2>
+        <label for="dailyProtein">Белки (г):</label>
+        <input type="number" id="dailyProtein" value="0" onchange="updateProgress(); saveData();">
+        <div class="progress-container">
+            <div id="proteinProgress" class="progress" style="width: 100%; background-color: green;">100%</div>
+        </div>
+
+        <label for="dailyFat">Жиры (г):</label>
+        <input type="number" id="dailyFat" value="0" onchange="updateProgress(); saveData();">
+        <div class="progress-container">
+            <div id="fatProgress" class="progress" style="width: 100%; background-color: blue;">100%</div>
+        </div>
+
+        <label for="dailyCarbs">Углеводы (г):</label>
+        <input type="number" id="dailyCarbs" value="0" onchange="updateProgress(); saveData();">
+        <div class="progress-container">
+            <div id="carbsProgress" class="progress" style="width: 100%; background-color: orange;">100%</div>
+        </div>
+
+        <label for="dailyKcal">Калорийность (ккал):</label>
+        <input type="number" id="dailyKcal" value="0" onchange="updateProgress(); saveData();">
+        <div class="progress-container">
+            <div id="kcalProgress" class="progress" style="width: 100%; background-color: red;">100%</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadData() {
+        const dailyProtein = localStorage.getItem('dailyProtein') || 0;
+        const dailyFat = localStorage.getItem('dailyFat') || 0;
+        const dailyCarbs = localStorage.getItem('dailyCarbs') || 0;
+        const dailyKcal = localStorage.getItem('dailyKcal') || 0;
+
+        document.getElementById('dailyProtein').value = dailyProtein;
+        document.getElementById('dailyFat').value = dailyFat;
+        document.getElementById('dailyCarbs').value = dailyCarbs;
+        document.getElementById('dailyKcal').value = dailyKcal;
+
+        const savedProducts = JSON.parse(localStorage.getItem('products')) || [];
+        if (savedProducts.length > 0) {
+            generateTable(savedProducts);
+        }
+
+        updateProgress();
+    }
+
+    function saveData() {
+        localStorage.setItem('dailyProtein', document.getElementById('dailyProtein').value);
+        localStorage.setItem('dailyFat', document.getElementById('dailyFat').value);
+        localStorage.setItem('dailyCarbs', document.getElementById('dailyCarbs').value);
+        localStorage.setItem('dailyKcal', document.getElementById('dailyKcal').value);
+    }
+
+    function generateTable(savedProducts = null) {
+        const input = document.getElementById('productTable').value;
+        const rows = input ? input.trim().split('\n').map(row => row.split('\t')) : [];
+        const productList = document.getElementById('productList');
+        productList.innerHTML = '';
+
+        const table = document.createElement('table');
+        const headerRow = document.createElement('tr');
+
+        headerRow.innerHTML = '<th>Название</th><th>Изображение</th><th>Съедено (г)</th>';
+        table.appendChild(headerRow);
+
+        const products = savedProducts || [];
+
+        for (let i = 1; i < (savedProducts ? savedProducts.length : rows.length); i++) {
+            const row = document.createElement('tr');
+            const productData = savedProducts ? savedProducts[i] : rows[i];
+
+            const name = productData[0];
+            const image = productData[1];
+            const price = parseFloat(productData[2].replace(',', '.'));
+            const weight = parseFloat(productData[4]);
+            const protein = parseFloat(productData[5]);
+            const fat = parseFloat(productData[6]);
+            const carbs = parseFloat(productData[7]);
+            const kcal = parseFloat(productData[8]);
+
+            const nameCell = document.createElement('td');
+            nameCell.innerText = name;
+            row.appendChild(nameCell);
+
+            const imgCell = document.createElement('td');
+            const img = document.createElement('img');
+            img.src = image;
+            img.width = 100;
+            imgCell.appendChild(img);
+            row.appendChild(imgCell);
+
+            const inputCell = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.value = savedProducts ? productData[9] : '0';
+            input.min = '0';
+            input.onchange = () => {
+                updateTotal(price, weight, protein, fat, carbs, kcal, input.value);
+                saveData(); 
+                saveProducts(); 
+            };
+            inputCell.appendChild(input);
+            row.appendChild(inputCell);
+
+            table.appendChild(row);
+            products.push([name, image, price, weight, protein, fat, carbs, kcal, input.value]);
+        }
+
+        productList.appendChild(table);
+        localStorage.setItem('products', JSON.stringify(products));
+    }
+
+    function saveProducts() {
+        const products = [];
+        const rows = document.querySelectorAll('#productList table tr:not(:first-child)');
+        rows.forEach(row => {
+            const input = row.querySelector('input');
+            const eatenAmount = input.value || '0';
+            const name = row.cells[0].innerText;
+            const image = row.cells[1].querySelector('img').src;
+            const price = parseFloat(row.cells[1].innerText);
+            const weight = parseFloat(row.cells[1].innerText);
+            const protein = parseFloat(row.cells[1].innerText);
+            const fat = parseFloat(row.cells[1].innerText);
+            const carbs = parseFloat(row.cells[1].innerText);
+            const kcal = parseFloat(row.cells[1].innerText);
+
+            products.push([name, image, price, weight, protein, fat, carbs, kcal, eatenAmount]);
+        });
+        localStorage.setItem('products', JSON.stringify(products));
+    }
+
+    function updateTotal(price, weight, protein, fat, carbs, kcal, eaten) {
+        let totalWeight = 0;
+        let totalCost = 0;
+        let totalProtein = 0;
+        let totalFat = 0;
+        let totalCarbs = 0;
+        let totalKcal = 0;
+
+        const rows = document.querySelectorAll('#productList table tr:not(:first-child)');
+        rows.forEach(row => {
+            const input = row.querySelector('input');
+            const eatenAmount = parseFloat(input.value) || 0;
+
+            totalWeight += eatenAmount;
+            totalCost += (eatenAmount / weight) * price;
+            totalProtein += (eatenAmount / weight) * protein;
+            totalFat += (eatenAmount / weight) * fat;
+            totalCarbs += (eatenAmount / weight) * carbs;
+            totalKcal += (eatenAmount / weight) * kcal;
+        });
+
+        document.getElementById('totalWeight').innerText = totalWeight.toFixed(2).replace('.', ',');
+        document.getElementById('totalCost').innerText = totalCost.toFixed(2).replace('.', ',');
+        document.getElementById('totalProtein').innerText = totalProtein.toFixed(2).replace('.', ',');
+        document.getElementById('totalFat').innerText = totalFat.toFixed(2).replace('.', ',');
+        document.getElementById('totalCarbs').innerText = totalCarbs.toFixed(2).replace('.', ',');
+        document.getElementById('totalKcal').innerText = totalKcal.toFixed(2).replace('.', ',');
+
+        updateProgress();
+    }
+
+    function updateProgress() {
+        const dailyProtein = parseFloat(document.getElementById('dailyProtein').value) || 0;
+        const dailyFat = parseFloat(document.getElementById('dailyFat').value) || 0;
+        const dailyCarbs = parseFloat(document.getElementById('dailyCarbs').value) || 0;
+        const dailyKcal = parseFloat(document.getElementById('dailyKcal').value) || 0;
+
+        const totalProtein = parseFloat(document.getElementById('totalProtein').innerText.replace(',', '.')) || 0;
+        const totalFat = parseFloat(document.getElementById('totalFat').innerText.replace(',', '.')) || 0;
+        const totalCarbs = parseFloat(document.getElementById('totalCarbs').innerText.replace(',', '.')) || 0;
+        const totalKcal = parseFloat(document.getElementById('totalKcal').innerText.replace(',', '.')) || 0;
+
+        updateBar('proteinProgress', dailyProtein, totalProtein);
+        updateBar('fatProgress', dailyFat, totalFat);
+        updateBar('carbsProgress', dailyCarbs, totalCarbs);
+        updateBar('kcalProgress', dailyKcal, totalKcal);
+    }
+
+    function updateBar(progressId, dailyValue, totalValue) {
+        const remaining = dailyValue - totalValue;
+        const percentage = Math.max(0, Math.min(100, (remaining / dailyValue) * 100));
+        const progressBar = document.getElementById(progressId);
+        progressBar.style.width = percentage + '%';
+        progressBar.innerText = remaining.toFixed(2).replace('.', ',') + ' г';
+        progressBar.style.backgroundColor = percentage > 0 ? (progressId === 'proteinProgress' ? 'green' : progressId === 'fatProgress' ? 'blue' : progressId === 'carbsProgress' ? 'orange' : 'red') : 'gray';
+    }
+
+    function resetEaten() {
+        if (confirm("Вы уверены, что хотите сбросить все съеденные данные?")) {
+            const rows = document.querySelectorAll('#productList table tr:not(:first-child)');
+            rows.forEach(row => {
+                const input = row.querySelector('input');
+                input.value = '0';
+            });
+            updateTotal(0, 0, 0, 0, 0, 0, 0);
+        }
+    }
+
+
+    window.onload = function() {
+        loadData();
+    };
+</script>
+
+</body>
+</html>
